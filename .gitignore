@@ -1,0 +1,48 @@
+# Dependências
+node_modules/
+jspm_packages/
+
+# Compilação
+dist/
+lib-cov/
+*.seed
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+*.swp
+*.vi
+*.vmdk
+*.vmem
+*.vmsd
+*.vmx
+*.vmxf
+
+# Dados e Relatórios (ignore o conteúdo, mas mantenha a pasta se quiser)
+dados/*.json
+relatorios/*.txt
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
