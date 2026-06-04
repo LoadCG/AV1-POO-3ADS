@@ -1,0 +1,97 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TipoAeronave {
+  COMERCIAL
+  MILITAR
+}
+
+enum TipoPeca {
+  NACIONAL
+  IMPORTADA
+}
+
+enum StatusPeca {
+  EM_PRODUCAO
+  EM_TRANSPORTE
+  PRONTA
+}
+
+enum StatusEtapa {
+  PENDENTE
+  ANDAMENTO
+  CONCLUIDA
+}
+
+enum NivelPermissao {
+  ADMINISTRADOR
+  ENGENHEIRO
+  OPERADOR
+}
+
+enum TipoTeste {
+  ELETRICO
+  HIDRAULICO
+  AERODINAMICO
+}
+
+enum ResultadoTeste {
+  APROVADO
+  REPROVADO
+}
+
+model Funcionario {
+  id             String          @id @default(uuid())
+  nome           String
+  telefone       String
+  endereco       String
+  usuario        String          @unique
+  senha          String
+  nivelPermissao NivelPermissao
+  etapas         Etapa[]         @relation("FuncionarioEtapa")
+}
+
+model Aeronave {
+  codigo     String       @id
+  modelo     String
+  tipo       TipoAeronave
+  capacidade Int
+  alcance    Int
+  pecas      Peca[]
+  etapas     Etapa[]
+  testes     Teste[]
+}
+
+model Peca {
+  id             Int          @id @default(autoincrement())
+  nome           String
+  tipo           TipoPeca
+  fornecedor     String
+  status         StatusPeca   @default(EM_PRODUCAO)
+  aeronave       Aeronave     @relation(fields: [aeronaveCodigo], references: [codigo], onDelete: Cascade)
+  aeronaveCodigo String
+}
+
+model Etapa {
+  id             Int           @id @default(autoincrement())
+  nome           String
+  prazo          String
+  status         StatusEtapa   @default(PENDENTE)
+  aeronave       Aeronave      @relation(fields: [aeronaveCodigo], references: [codigo], onDelete: Cascade)
+  aeronaveCodigo String
+  funcionarios   Funcionario[] @relation("FuncionarioEtapa")
+}
+
+model Teste {
+  id             Int            @id @default(autoincrement())
+  tipo           TipoTeste
+  resultado      ResultadoTeste
+  aeronave       Aeronave       @relation(fields: [aeronaveCodigo], references: [codigo], onDelete: Cascade)
+  aeronaveCodigo String
+}

@@ -1,0 +1,15 @@
+# Next.js
+frontend/.next/
+frontend/node_modules/
+
+# Node.js
+backend/node_modules/
+backend/dist/
+
+# Env files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db

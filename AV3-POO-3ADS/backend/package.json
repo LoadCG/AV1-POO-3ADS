@@ -1,0 +1,17 @@
+{
+  "name": "aerocode",
+  "version": "1.0.0",
+  "description": "Sistema CLI de gestão de produção de aeronaves - SkyForge",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js"
+  },
+  "author": "Aerocode",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

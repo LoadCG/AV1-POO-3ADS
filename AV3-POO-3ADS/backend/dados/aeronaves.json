@@ -1,0 +1,12 @@
+[
+  {
+    "codigo": "001",
+    "modelo": "TESTE",
+    "tipo": "MILITAR",
+    "capacidade": 2,
+    "alcance": 2000,
+    "pecas": [],
+    "etapas": [],
+    "testes": []
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "001",
+    "nome": "Administrador",
+    "telefone": "00-0000-0000",
+    "endereco": "Sede Aerocode",
+    "usuario": "admin",
+    "senha": "admin123",
+    "nivelPermissao": "ADMINISTRADOR"
+  },
+  {
+    "id": "002",
+    "nome": "Engenheiro Chefe",
+    "telefone": "11-9999-0001",
+    "endereco": "Sede Aerocode - Engenharia",
+    "usuario": "eng01",
+    "senha": "eng123",
+    "nivelPermissao": "ENGENHEIRO"
+  },
+  {
+    "id": "003",
+    "nome": "Operador de Linha",
+    "telefone": "11-9999-0002",
+    "endereco": "Sede Aerocode - Produção",
+    "usuario": "op01",
+    "senha": "op123",
+    "nivelPermissao": "OPERADOR"
+  }
+]

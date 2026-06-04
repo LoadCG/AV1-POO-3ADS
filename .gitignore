@@ -46,3 +46,6 @@ lerna-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Frontend AV2
+/AV2-POO-3ADS/

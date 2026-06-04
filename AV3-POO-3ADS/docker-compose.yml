@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: skyforge_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: fatec
+      MYSQL_DATABASE: skyforge
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pfatec"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: 
+      context: ./frontend
+    container_name: skyforge_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # O hostname "db" corresponde ao nome do serviço do MySQL definido acima
+      - DATABASE_URL=mysql://root:fatec@db:3306/skyforge
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
