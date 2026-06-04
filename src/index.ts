@@ -15,6 +15,36 @@ import { vermelho, verde, amarelo, ciano, negrito, magenta } from "./cores";
 let aeronaves: Aeronave[] = [];
 let funcionarios: Funcionario[] = [];
 
+/**
+ * Valida se a entrada é segura: 
+ * - Não vazia
+ * - Contém pelo menos uma letra ou número (evita apenas símbolos)
+ * - Não contém caracteres de controle (prevenção de injection/ANSI)
+ */
+function validarEntrada(texto: string, campo: string): boolean {
+  const limpo = texto.trim();
+  
+  if (limpo.length === 0) {
+    console.log(vermelho(`❌ Erro: O campo "${campo}" não pode estar vazio.`));
+    return false;
+  }
+
+  // Regex Unicode: \p{L} = Letras, \p{N} = Números. Garante que não sejam apenas símbolos/espaços.
+  const temAlfanumerico = /[\p{L}\p{N}]/u.test(limpo);
+  if (!temAlfanumerico) {
+    console.log(vermelho(`❌ Erro: O campo "${campo}" deve conter letras ou números.`));
+    return false;
+  }
+
+  // Bloqueia caracteres de controle (ASCII 0-31 e 127) para evitar "sujar" o terminal ou arquivos
+  if (/[\x00-\x1F\x7F]/.test(texto)) {
+    console.log(vermelho(`❌ Erro: O campo "${campo}" contém caracteres inválidos.`));
+    return false;
+  }
+
+  return true;
+}
+
 // menu de opções gerais das aeronaves
 async function menuAeronave(): Promise<void> {
   const opcao = await menu("AERONAVES", [
@@ -37,6 +67,7 @@ async function cadastrarAeronave(): Promise<void> {
   }
 
   const codigo = await perguntar("Código da aeronave: ");
+  if (!validarEntrada(codigo, "Código")) return;
 
   // checa se já existe esse código pra não duplicar
   if (aeronaves.find(a => a.codigo === codigo)) {
@@ -45,6 +76,7 @@ async function cadastrarAeronave(): Promise<void> {
   }
 
   const modelo = await perguntar("Modelo: ");
+  if (!validarEntrada(modelo, "Modelo")) return;
   console.log("Tipo: 1-COMERCIAL  2-MILITAR");
   const tipoNum = await perguntar("Tipo: ");
   if (tipoNum !== "1" && tipoNum !== "2") {
@@ -88,6 +120,8 @@ function listarAeronaves(): void {
 // pede o código e mostra tudo detalhado daquela aeronave
 async function verDetalhesAeronave(): Promise<void> {
   const codigo = await perguntar("Código da aeronave: ");
+  if (!validarEntrada(codigo, "Código")) return;
+  
   const aeronave = aeronaves.find(a => a.codigo === codigo);
   if (!aeronave) {
     console.log(vermelho("❌ Aeronave não encontrada."));
@@ -122,7 +156,10 @@ async function adicionarPeca(): Promise<void> {
   if (!aeronave) { console.log(vermelho("❌ Aeronave não encontrada.")); return; }
 
   const nome = await perguntar("Nome da peça: ");
+  if (!validarEntrada(nome, "Nome da Peça")) return;
+
   const fornecedor = await perguntar("Fornecedor: ");
+  if (!validarEntrada(fornecedor, "Fornecedor")) return;
   console.log("Tipo: 1-NACIONAL  2-IMPORTADA");
   const tipoNum = await perguntar("Tipo: ");
   if (tipoNum !== "1" && tipoNum !== "2") {
@@ -144,15 +181,21 @@ async function atualizarStatusPeca(): Promise<void> {
   }
 
   const codigo = await perguntar("Código da aeronave: ");
+  if (!validarEntrada(codigo, "Código")) return;
+
   const aeronave = aeronaves.find(a => a.codigo === codigo);
   if (!aeronave) { console.log(vermelho("❌ Aeronave não encontrada.")); return; }
 
   if (aeronave.pecas.length === 0) { console.log(amarelo("Nenhuma peça cadastrada nesta aeronave.")); return; }
 
   aeronave.pecas.forEach((p, i) => console.log(`${i + 1}. ${p.nome} - ${p.status}`));
-  const idx = parseInt(await perguntar("Número da peça: ")) - 1;
+  const resposta = await perguntar("Número da peça: ");
+  const idx = parseInt(resposta) - 1;
 
-  if (idx < 0 || idx >= aeronave.pecas.length) { console.log(vermelho("❌ Peça inválida.")); return; }
+  if (isNaN(idx) || idx < 0 || idx >= aeronave.pecas.length) {
+    console.log(vermelho("❌ Peça inválida. Digite o número correspondente na lista."));
+    return;
+  }
 
   aeronave.pecas[idx].atualizarStatus();
   salvarAeronaves(aeronaves);
@@ -188,7 +231,16 @@ async function adicionarEtapa(): Promise<void> {
   if (!aeronave) { console.log(vermelho("❌ Aeronave não encontrada.")); return; }
 
   const nome = await perguntar("Nome da etapa: ");
+  if (!validarEntrada(nome, "Nome da Etapa")) return;
+
+  // evita etapas com nomes repetidos na mesma aeronave
+  if (aeronave.etapas.find(e => e.nome === nome)) {
+    console.log(vermelho(`❌ Já existe uma etapa chamada "${nome}" nesta aeronave.`));
+    return;
+  }
+
   const prazo = await perguntar("Prazo (ex: 2025-12-31): ");
+  if (!validarEntrada(prazo, "Prazo")) return;
 
   aeronave.etapas.push(new Etapa(nome, prazo));
   salvarAeronaves(aeronaves);
@@ -232,6 +284,8 @@ async function associarFuncionarioEtapa(): Promise<void> {
   if (!aeronave) return;
 
   const idFunc = await perguntar("ID do funcionário: ");
+  if (!validarEntrada(idFunc, "ID")) return;
+
   const func = funcionarios.find(f => f.id === idFunc);
   if (!func) { console.log(vermelho("❌ Funcionário não encontrado.")); return; }
 
@@ -260,15 +314,21 @@ async function listarFuncionariosEtapa(): Promise<void> {
 // helper pra selecionar aeronave e índice de etapa juntos
 async function selecionarEtapa(): Promise<{ aeronave: Aeronave | null, etapaIdx: number }> {
   const codigo = await perguntar("Código da aeronave: ");
+  if (!validarEntrada(codigo, "Código")) return { aeronave: null, etapaIdx: -1 };
+
   const aeronave = aeronaves.find(a => a.codigo === codigo);
   if (!aeronave) { console.log(vermelho("❌ Aeronave não encontrada.")); return { aeronave: null, etapaIdx: -1 }; }
 
   if (aeronave.etapas.length === 0) { console.log(amarelo("Nenhuma etapa cadastrada.")); return { aeronave: null, etapaIdx: -1 }; }
 
   aeronave.etapas.forEach((e, i) => console.log(`${i + 1}. ${e.nome} - ${e.status}`));
-  const idx = parseInt(await perguntar("Número da etapa: ")) - 1;
+  const resposta = await perguntar("Número da etapa: ");
+  const idx = parseInt(resposta) - 1;
 
-  if (idx < 0 || idx >= aeronave.etapas.length) { console.log(vermelho("❌ Etapa inválida.")); return { aeronave: null, etapaIdx: -1 }; }
+  if (isNaN(idx) || idx < 0 || idx >= aeronave.etapas.length) {
+    console.log(vermelho("❌ Etapa inválida. Digite o número correspondente na lista."));
+    return { aeronave: null, etapaIdx: -1 };
+  }
 
   return { aeronave, etapaIdx: idx };
 }
@@ -293,12 +353,15 @@ async function cadastrarFuncionario(): Promise<void> {
   }
 
   const id = await perguntar("ID do funcionário: ");
+  if (!validarEntrada(id, "ID")) return;
+
   if (funcionarios.find(f => f.id === id)) {
     console.log(vermelho("❌ Já existe um funcionário com este ID."));
     return;
   }
 
   const nome = await perguntar("Nome: ");
+  if (!validarEntrada(nome, "Nome")) return;
 
   // Easter Egg — Nome Proibido (Gerson é gênio demais para o sistema)
   if (nome.toLowerCase() === "gerson") {
@@ -307,8 +370,23 @@ async function cadastrarFuncionario(): Promise<void> {
   }
   const telefone = await perguntar("Telefone: ");
   const endereco = await perguntar("Endereço: ");
+
   const usuario = await perguntar("Usuário (login): ");
+  if (!validarEntrada(usuario, "Login")) return;
+
+  // Validação pedida pelo professor: impedir logins duplicados
+  if (funcionarios.find(f => f.usuario === usuario)) {
+    console.log(vermelho(`❌ Erro: O login "${usuario}" já está em uso por outro funcionário.`));
+    return;
+  }
+
   const senha = await perguntar("Senha: ");
+  if (!validarEntrada(senha, "Senha")) return;
+  
+  if (senha.length < 4) {
+    console.log(vermelho("❌ A senha deve ter pelo menos 4 caracteres."));
+    return;
+  }
 
   console.log("Nível: 1-ADMINISTRADOR  2-ENGENHEIRO  3-OPERADOR");
   const nivelNum = await perguntar("Nível: ");
@@ -343,6 +421,11 @@ async function registrarTeste(): Promise<void> {
   }
 
   const codigo = await perguntar("Código da aeronave: ");
+  if (!codigo.trim()) {
+    console.log(vermelho("❌ O código da aeronave não pode ser vazio."));
+    return;
+  }
+
   const aeronave = aeronaves.find(a => a.codigo === codigo);
   if (!aeronave) { console.log(vermelho("❌ Aeronave não encontrada.")); return; }
 
@@ -350,11 +433,12 @@ async function registrarTeste(): Promise<void> {
   const tipoNum = await perguntar("Tipo: ");
   const tipos = [TipoTeste.ELETRICO, TipoTeste.HIDRAULICO, TipoTeste.AERODINAMICO];
   const idx = parseInt(tipoNum) - 1;
-  const tipo = tipos[idx];
-  if (!tipo) {
-    console.log(vermelho("❌ Opção inválida. Escolha entre 1 e 3."));
+
+  if (isNaN(idx) || idx < 0 || idx >= tipos.length) {
+    console.log(vermelho("❌ Opção de teste inválida. Escolha entre 1 e 3."));
     return;
   }
+  const tipo = tipos[idx];
 
   console.log("Resultado: 1-APROVADO  2-REPROVADO");
   const resNum = await perguntar("Resultado: ");
@@ -411,6 +495,10 @@ async function fazerLogin(): Promise<boolean> {
   console.log("\n========== LOGIN SKYFORGE ==========");
   const usuario = await perguntar("Usuário: ");
   const senha = await perguntar("Senha: ");
+
+  if (!validarEntrada(usuario, "Usuário") || !validarEntrada(senha, "Senha")) {
+    return false;
+  }
 
   if (login(usuario, senha, funcionarios)) {
     const logado = getUsuarioLogado()!;

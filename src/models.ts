@@ -100,12 +100,18 @@ export class Etapa {
 
   // termina o trabalho se tiver em andamento
   finalizar(): boolean {
-    if (this.status === StatusEtapa.ANDAMENTO) {
-      this.status = StatusEtapa.CONCLUIDA;
-      return true;
+    if (this.status !== StatusEtapa.ANDAMENTO) {
+      console.log(vermelho(`Etapa "${this.nome}" não pode ser concluída (status atual: ${this.status})`));
+      return false;
     }
-    console.log(vermelho(`Etapa "${this.nome}" não pode ser concluída (status atual: ${this.status})`));
-    return false;
+
+    if (this.funcionarios.length === 0) {
+      console.log(vermelho(`❌ Erro: A etapa "${this.nome}" não possui funcionários associados. Não pode ser finalizada.`));
+      return false;
+    }
+
+    this.status = StatusEtapa.CONCLUIDA;
+    return true;
   }
 
   // bota uma pessoa pra trabalhar nessa etapa
