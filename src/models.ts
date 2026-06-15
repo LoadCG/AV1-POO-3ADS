@@ -1,12 +1,19 @@
-// models.ts — aqui ficam as classes que representam nossas coisas (avião, peças, pessoas...)
-
+import * as fs from "fs";
+import * as path from "path";
 import {
   TipoAeronave, TipoPeca, StatusPeca,
   StatusEtapa, NivelPermissao, TipoTeste, ResultadoTeste
 } from "./enums";
 import { vermelho, verde, amarelo, ciano, negrito } from "./cores";
 
-// cada peça que vai no avião
+const DIR_DADOS = path.join(__dirname, "../dados");
+
+function garantirPasta(): void {
+  if (!fs.existsSync(DIR_DADOS)) {
+    fs.mkdirSync(DIR_DADOS, { recursive: true });
+  }
+}
+
 export class Peca {
   nome: string;
   tipo: TipoPeca;
@@ -17,18 +24,27 @@ export class Peca {
     this.nome = nome;
     this.tipo = tipo;
     this.fornecedor = fornecedor;
-    this.status = StatusPeca.EM_PRODUCAO; // começa em produção por padrão
+    this.status = StatusPeca.EM_PRODUCAO;
   }
 
-  // muda o status da peça na ordem: produção -> transporte -> pronta
-  atualizarStatus(): void {
-    if (this.status === StatusPeca.EM_PRODUCAO) {
-      this.status = StatusPeca.EM_TRANSPORTE;
-    } else if (this.status === StatusPeca.EM_TRANSPORTE) {
-      this.status = StatusPeca.PRONTA;
-    } else {
-      console.log(vermelho(`Peça "${this.nome}" já está PRONTA, não dá pra avançar mais.`));
+  atualizarStatus(novoStatus: StatusPeca): void {
+    const ordemStatus = [StatusPeca.EM_PRODUCAO, StatusPeca.EM_TRANSPORTE, StatusPeca.PRONTA];
+    const atualIdx = ordemStatus.indexOf(this.status);
+    const novoIdx = ordemStatus.indexOf(novoStatus);
+
+    if (novoIdx <= atualIdx) {
+      console.log(vermelho(`Peça "${this.nome}": não é possível retroceder o status (atual: ${this.status}).`));
+      return;
     }
+    this.status = novoStatus;
+  }
+
+  salvar(): void {
+    // Peça é persistida como parte da Aeronave à qual pertence
+  }
+
+  carregar(): void {
+    // Peça é carregada como parte da Aeronave à qual pertence
   }
 
   exibir(): void {
@@ -41,7 +57,6 @@ export class Peca {
   }
 }
 
-// quem trabalha na fábrica
 export class Funcionario {
   id: string;
   nome: string;
@@ -64,9 +79,35 @@ export class Funcionario {
     this.nivelPermissao = nivelPermissao;
   }
 
-  // só checa se a senha é igual, bem simples
-  autenticar(usuario: string, senha: string): boolean {
-    return this.usuario === usuario && this.senha === senha;
+  autenticar(usuario: string, senhaHash: string): boolean {
+    return this.usuario === usuario && this.senha === senhaHash;
+  }
+
+  salvar(): void {
+    garantirPasta();
+    const nomeArquivo = `funcionario_${this.id.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    fs.writeFileSync(
+      path.join(DIR_DADOS, nomeArquivo),
+      JSON.stringify(this, null, 2),
+      "utf8"
+    );
+  }
+
+  carregar(): void {
+    const nomeArquivo = `funcionario_${this.id.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    const caminho = path.join(DIR_DADOS, nomeArquivo);
+    if (!fs.existsSync(caminho)) return;
+    try {
+      const raw = JSON.parse(fs.readFileSync(caminho, "utf8"));
+      this.nome = raw.nome;
+      this.telefone = raw.telefone;
+      this.endereco = raw.endereco;
+      this.usuario = raw.usuario;
+      this.senha = raw.senha;
+      this.nivelPermissao = raw.nivelPermissao;
+    } catch {
+      console.log(vermelho(`Erro ao carregar dados do funcionário ${this.id}.`));
+    }
   }
 
   exibir(): void {
@@ -74,12 +115,11 @@ export class Funcionario {
   }
 }
 
-// uma das fases da fabricação
 export class Etapa {
   nome: string;
-  prazo: string; // ex: "2025-12-31"
+  prazo: string;
   status: StatusEtapa;
-  funcionarios: string[]; // guarda os IDs dos funcionários associados
+  funcionarios: string[];
 
   constructor(nome: string, prazo: string) {
     this.nome = nome;
@@ -88,7 +128,6 @@ export class Etapa {
     this.funcionarios = [];
   }
 
-  // começa o trabalho se tiver pendente
   iniciar(): boolean {
     if (this.status === StatusEtapa.PENDENTE) {
       this.status = StatusEtapa.ANDAMENTO;
@@ -98,7 +137,6 @@ export class Etapa {
     return false;
   }
 
-  // termina o trabalho se tiver em andamento
   finalizar(): boolean {
     if (this.status !== StatusEtapa.ANDAMENTO) {
       console.log(vermelho(`Etapa "${this.nome}" não pode ser concluída (status atual: ${this.status})`));
@@ -106,7 +144,7 @@ export class Etapa {
     }
 
     if (this.funcionarios.length === 0) {
-      console.log(vermelho(`❌ Erro: A etapa "${this.nome}" não possui funcionários associados. Não pode ser finalizada.`));
+      console.log(vermelho(`Etapa "${this.nome}" não possui funcionários associados. Associe ao menos um antes de finalizar.`));
       return false;
     }
 
@@ -114,17 +152,24 @@ export class Etapa {
     return true;
   }
 
-  // bota uma pessoa pra trabalhar nessa etapa
-  associarFuncionario(idFuncionario: string): void {
-    if (this.funcionarios.includes(idFuncionario)) {
-      console.log(amarelo(`Funcionário ${idFuncionario} já está nesta etapa.`));
+  associarFuncionario(funcionario: Funcionario): void {
+    if (this.funcionarios.includes(funcionario.id)) {
+      console.log(amarelo(`Funcionário ${funcionario.id} já está associado a esta etapa.`));
     } else {
-      this.funcionarios.push(idFuncionario);
+      this.funcionarios.push(funcionario.id);
     }
   }
 
   listarFuncionarios(): string[] {
     return this.funcionarios;
+  }
+
+  salvar(): void {
+    // Etapa é persistida como parte da Aeronave à qual pertence
+  }
+
+  carregar(): void {
+    // Etapa é carregada como parte da Aeronave à qual pertence
   }
 
   exibir(): void {
@@ -137,7 +182,6 @@ export class Etapa {
   }
 }
 
-// ficha de um teste de qualidade
 export class Teste {
   tipo: TipoTeste;
   resultado: ResultadoTeste;
@@ -145,6 +189,14 @@ export class Teste {
   constructor(tipo: TipoTeste, resultado: ResultadoTeste) {
     this.tipo = tipo;
     this.resultado = resultado;
+  }
+
+  salvar(): void {
+    // Teste é persistido como parte da Aeronave à qual pertence
+  }
+
+  carregar(): void {
+    // Teste é carregado como parte da Aeronave à qual pertence
   }
 
   exibir(): void {
@@ -156,7 +208,6 @@ export class Teste {
   }
 }
 
-// o avião em si, que junta tudo (peças, etapas, testes)
 export class Aeronave {
   codigo: string;
   modelo: string;
@@ -178,13 +229,11 @@ export class Aeronave {
     this.testes = [];
   }
 
-  // mostra um resumão bonito de tudo da aeronave
-  exibirDetalhes(): void {
+  detalhes(): void {
     console.log(ciano("\n" + "=".repeat(40)));
     console.log(ciano(`       DETALHES DA AERONAVE: ${negrito(this.codigo)}`));
     console.log(ciano("=".repeat(40)));
 
-    // telinha de resumo rápido com ícones
     this.exibirResumoInteligente();
 
     console.log(`Modelo: ${negrito(this.modelo)}`);
@@ -192,7 +241,6 @@ export class Aeronave {
     console.log(`Capacidade: ${this.capacidade} passageiros`);
     console.log(`Alcance: ${this.alcance} km`);
 
-    // desenha aquela barra de progresso no console
     this.exibirBarraProgresso();
 
     console.log(ciano("\n--- Peças ---"));
@@ -210,29 +258,57 @@ export class Aeronave {
     console.log(ciano("\n" + "=".repeat(40) + "\n"));
   }
 
+  salvar(): void {
+    garantirPasta();
+    const nomeArquivo = `aeronave_${this.codigo.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    fs.writeFileSync(
+      path.join(DIR_DADOS, nomeArquivo),
+      JSON.stringify(this, null, 2),
+      "utf8"
+    );
+  }
+
+  carregar(): void {
+    const nomeArquivo = `aeronave_${this.codigo.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    const caminho = path.join(DIR_DADOS, nomeArquivo);
+    if (!fs.existsSync(caminho)) return;
+    try {
+      const raw = JSON.parse(fs.readFileSync(caminho, "utf8"));
+      this.modelo = raw.modelo;
+      this.tipo = raw.tipo;
+      this.capacidade = raw.capacidade;
+      this.alcance = raw.alcance;
+      this.pecas = raw.pecas || [];
+      this.etapas = raw.etapas || [];
+      this.testes = raw.testes || [];
+    } catch {
+      console.log(vermelho(`Erro ao carregar dados da aeronave ${this.codigo}.`));
+    }
+  }
+
   private exibirResumoInteligente(): void {
     const pecasEmProducao = this.pecas.filter(p => p.status !== StatusPeca.PRONTA).length;
     const testesReprovados = this.testes.filter(t => t.resultado === ResultadoTeste.REPROVADO).length;
     const etapasConcluidas = this.etapas.filter(e => e.status === StatusEtapa.CONCLUIDA).length;
 
     console.log(negrito("Resumo de Status:"));
-    
+
     if (pecasEmProducao > 0) {
-      console.log(`  ${amarelo("⚠️")}  ${pecasEmProducao} peça(s) ainda em produção/transporte.`);
+      console.log(`  ${amarelo("!")}  ${pecasEmProducao} peca(s) ainda em producao/transporte.`);
     } else if (this.pecas.length > 0) {
-      console.log(`  ${verde("✅")}  Todas as peças estão prontas.`);
+      console.log(`  ${verde("OK")}  Todas as pecas estao prontas.`);
     }
 
     if (testesReprovados > 0) {
-      console.log(`  ${vermelho("❌")}  ${testesReprovados} teste(s) reprovado(s)!`);
+      console.log(`  ${vermelho("X")}  ${testesReprovados} teste(s) reprovado(s)!`);
     } else if (this.testes.length > 0) {
-      console.log(`  ${verde("✅")}  Todos os testes foram aprovados.`);
+      console.log(`  ${verde("OK")}  Todos os testes foram aprovados.`);
     }
 
     if (etapasConcluidas === this.etapas.length && this.etapas.length > 0) {
-      console.log(`  ${verde("✅")}  Todas as etapas concluídas.`);
+      console.log(`  ${verde("OK")}  Todas as etapas concluidas.`);
     } else if (this.etapas.length > 0) {
-      console.log(`  ${amarelo("ℹ️")}  Produção em andamento (${etapasConcluidas}/${this.etapas.length} etapas).`);
+      console.log(`  [i]  Producao em andamento (${etapasConcluidas}/${this.etapas.length} etapas).`);
     }
     console.log("");
   }
@@ -243,9 +319,9 @@ export class Aeronave {
     const total = this.etapas.length;
     const concluidas = this.etapas.filter(e => e.status === StatusEtapa.CONCLUIDA).length;
     const porcentagem = Math.floor((concluidas / total) * 10);
-    
-    const barra = "█".repeat(porcentagem) + "░".repeat(10 - porcentagem);
-    
-    console.log(`\nProgresso da Produção: [${verde(barra)}] ${concluidas}/${total} etapas concluídas`);
+
+    const barra = "#".repeat(porcentagem) + "-".repeat(10 - porcentagem);
+
+    console.log(`\nProgresso da Producao: [${verde(barra)}] ${concluidas}/${total} etapas concluidas`);
   }
 }

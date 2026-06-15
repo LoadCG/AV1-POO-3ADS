@@ -1,14 +1,22 @@
-// auth.ts — aqui a gente controla quem entrou no sistema e o que cada um pode ou não pode fazer
-
 import { Funcionario } from "./models";
 import { NivelPermissao } from "./enums";
+import * as crypto from "crypto";
 
-// aqui fica guardado quem é o carinha que tá logado agora
+const SALT = "aerocode_skyforge_2024";
+
+export function hashSenha(senha: string): string {
+  return crypto.createHash("sha256").update(senha + SALT).digest("hex");
+}
+
+export function isSenhaHashed(senha: string): boolean {
+  return /^[a-f0-9]{64}$/.test(senha);
+}
+
 let usuarioLogado: Funcionario | null = null;
 
-// tenta logar o usuário — se a senha bater, retorna true
 export function login(usuario: string, senha: string, funcionarios: Funcionario[]): boolean {
-  const encontrado = funcionarios.find(f => f.autenticar(usuario, senha));
+  const senhaHash = hashSenha(senha);
+  const encontrado = funcionarios.find(f => f.autenticar(usuario.trim(), senhaHash));
   if (encontrado) {
     usuarioLogado = encontrado;
     return true;
@@ -24,16 +32,13 @@ export function getUsuarioLogado(): Funcionario | null {
   return usuarioLogado;
 }
 
-// só checa se tem alguém logado no momento
 export function estaLogado(): boolean {
   return usuarioLogado !== null;
 }
 
-// vê se quem tá logado tem moral pra fazer o que pediu
 export function temPermissao(nivelMinimo: NivelPermissao): boolean {
   if (!usuarioLogado) return false;
 
-  // regra de quem manda mais: admin > engenheiro > operador
   const hierarquia = [
     NivelPermissao.OPERADOR,
     NivelPermissao.ENGENHEIRO,

@@ -1,38 +1,41 @@
-# Dependências
+# ============================================================
+# AV1-POO-3ADS — .gitignore
+# Apenas o projeto AV1 (Aerocode CLI) deve ser versionado aqui.
+# ============================================================
+
+# Outros projetos do repositório monorepo (possuem repos/branches próprios)
+AV2-POO-3ADS/
+AV3-POO-3ADS/
+skyforge-temp/
+
+# Dependências Node.js
 node_modules/
 jspm_packages/
 
-# Compilação
+# Build TypeScript (gerado automaticamente pelo tsc)
 dist/
+*.tsbuildinfo
 lib-cov/
-*.seed
-*.log
-*.csv
-*.dat
-*.out
-*.pid
-*.gz
-*.swp
-*.vi
-*.vmdk
-*.vmem
-*.vmsd
-*.vmx
-*.vmxf
 
-# Dados e Relatórios (ignore o conteúdo, mas mantenha a pasta se quiser)
+# Dados de runtime (criados pela execução do sistema, não devem ser versionados)
 dados/*.json
 relatorios/*.txt
 
+# Variáveis de ambiente e segredos
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+
 # Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
-
-# TypeScript
-*.tsbuildinfo
 
 # IDEs e Editores
 .vscode/
@@ -42,10 +45,29 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.vi
 
-# OS
+# Arquivos temporários e de SO
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
 
-# Frontend AV2
-/AV2-POO-3ADS/
+# Arquivos de compressão e binários gerados
+*.gz
+*.zip
+*.tar
+*.pid
+*.seed
+*.out
+*.vmdk
+*.vmem
+*.vmsd
+*.vmx
+*.vmxf
